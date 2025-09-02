@@ -77,24 +77,27 @@ func readFile(path string) ([]byte, error) {
 
 func lecturaByteCode(text string) {
 	readingInts := false
-	readingItem := false
+	intsRead := false 
 	var instruccionRune []rune
 	var instruccionString string
 	var itemRune []rune
 	var item any
 	for index, chr := range text {
-		if readingItem {
+		if chr != '\t' && !readingInts && intsRead {
 			itemRune = append(itemRune, chr)
+			if index+1 == len(text){
+				item = any(itemRune)
+				whichExecute(instruccionString, item)
+				return
+			} 
 			if text[index+1] == '\r' {
 				item = any(itemRune)
 				whichExecute(instruccionString, item)
 				instruccionString = ""
 				instruccionRune = []rune{}
-				index = index + 2
-				readingItem = false
+				intsRead = false
 			}
-		} else if chr == '\t' && !readingInts {
-			index++
+		} else if chr == '\t' && !readingInts && !intsRead {
 			readingInts = true
 		} else if chr == '\r' && readingInts {
 			instruccionString = string(instruccionRune)
@@ -104,9 +107,8 @@ func lecturaByteCode(text string) {
 			readingInts = false
 		} else if chr == '\t' && readingInts {
 			instruccionString = string(instruccionRune)
-			index = index + 2
-			readingItem = true
 			readingInts = false
+			intsRead = true
 		} else if readingInts {
 			instruccionRune = append(instruccionRune, chr)
 		}
@@ -128,7 +130,7 @@ func EXECUTE_LOAD_CONST(item any) {
 }
 
 func main() {
-	var txt string = "Pruebas_de_interprete\\example1.txt"
+	/*var txt string = "Pruebas_de_interprete\\example1.txt"
 	fileError, errorName := fileExist(txt)
 	if fileError {
 		fmt.Println("Si va")
@@ -138,7 +140,10 @@ func main() {
 	dataTemp, _ := readFile(txt)
 	data := string(dataTemp)
 	fmt.Println(data)
-	lecturaByteCode(data)
+	lecturaByteCode(data)*/
+	tal:= 'a'
+	e := int(tal)
+	fmt.Println(e)
 	//
 	/*var tal string = "dsds"
 	fmt.Println(any(tal))*/
