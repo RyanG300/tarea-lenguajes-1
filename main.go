@@ -1,18 +1,35 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"os"
 )
 
+/*
+------------------------------------------------------------------------
+------------------Pila y memoria de las variables (struct)----------------
+------------------------------------------------------------------------
+*/
 type Stack struct {
 	items []any
 }
 
-func (s *Stack) Push(v any) {
+type variablesMemory struct { //Es lo mismo al anterior struct, estas separadas solo para evitar utilizar los atributos de la pila en la memoria de variables
+	variables []any
+}
+
+var stack Stack
+
+/*------------------------------------------------------------------------
+---------------------------Atributos de la pila---------------------------
+------------------------------------------------------------------------*/
+
+func (s *Stack) push(v any) {
 	s.items = append(s.items, v)
 }
 
-func (s *Stack) Pop() (any, bool) {
+func (s *Stack) pop() (any, bool) {
 	if len(s.items) == 0 {
 		return nil, false
 	}
@@ -22,7 +39,7 @@ func (s *Stack) Pop() (any, bool) {
 	return v, true
 }
 
-func (s *Stack) Top() (any, bool) {
+func (s *Stack) top() (any, bool) {
 	var x any
 	if len(s.items) == 0 {
 		return x, false
@@ -31,16 +48,120 @@ func (s *Stack) Top() (any, bool) {
 	return x, true
 }
 
-func (s *Stack) IsEmpty() bool {
+func (s *Stack) isEmpty() bool {
 	return len(s.items) == 0
 }
 
-func main() {
-	var s Stack
-	if s.IsEmpty() {
-		fmt.Println("Pingas")
+/*------------------------------------------------------------------------
+-------------------------- Lectura de archivos ---------------------------
+------------------------------------------------------------------------*/
+
+func fileExist(path string) (bool, error) {
+	_, err := os.Lstat(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return false, err
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+func readFile(path string) ([]byte, error) {
+	return os.ReadFile(path)
+}
+
+/*------------------------------------------------------------------------
+----------------------- Instrucciones de bytecode ------------------------
+------------------------------------------------------------------------*/
+
+func lecturaByteCode(text string) {
+	readingInts := false
+	readingItem := false
+	var instruccionRune []rune
+	var instruccionString string
+	var itemRune []rune
+	var item any
+	for index, chr := range text {
+		if readingItem {
+			itemRune = append(itemRune, chr)
+			if text[index+1] == '\r' {
+				item = any(itemRune)
+				whichExecute(instruccionString, item)
+				instruccionString = ""
+				instruccionRune = []rune{}
+				index = index + 2
+				readingItem = false
+			}
+		} else if chr == '\t' && !readingInts {
+			index++
+			readingInts = true
+		} else if chr == '\r' && readingInts {
+			instruccionString = string(instruccionRune)
+			whichExecute(instruccionString, item)
+			instruccionString = ""
+			instruccionRune = []rune{}
+			readingInts = false
+		} else if chr == '\t' && readingInts {
+			instruccionString = string(instruccionRune)
+			index = index + 2
+			readingItem = true
+			readingInts = false
+		} else if readingInts {
+			instruccionRune = append(instruccionRune, chr)
+		}
 	}
 }
 
+func whichExecute(instruccion string, item any) {
+	switch instruccion {
+	case "LOAD_CONST":
+		EXECUTE_LOAD_CONST(item)
+	case "STORE_FAST":
+		fmt.Println("Something happened 2...")
+	}
+}
 
+func EXECUTE_LOAD_CONST(item any) {
+	stack.push(item)
+	fmt.Println(stack.items[0])
+}
 
+func main() {
+	var txt string = "Pruebas_de_interprete\\example1.txt"
+	fileError, errorName := fileExist(txt)
+	if fileError {
+		fmt.Println("Si va")
+	} else {
+		fmt.Println("no va xdxdxd: ", errorName)
+	}
+	dataTemp, _ := readFile(txt)
+	data := string(dataTemp)
+	fmt.Println(data)
+	lecturaByteCode(data)
+	//
+	/*var tal string = "dsds"
+	fmt.Println(any(tal))*/
+}
+
+/*Prueba
+
+var s Stack
+	s.Push(10)
+	s.Push("AAAAA")
+	if s.IsEmpty() {
+		fmt.Println("Pingas")
+	}
+	fmt.Println(s.items[1])
+	s.items[1] = 20
+
+	var e any
+	var y bool
+	e,y = s.Top()
+	if !y{
+		fmt.Println("Pingas2")
+	}else{
+		fmt.Println(e)
+	}
+
+*/
