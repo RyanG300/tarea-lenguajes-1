@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 )
 
 /*
@@ -77,7 +78,7 @@ func readFile(path string) ([]byte, error) {
 
 func lecturaByteCode(text string) {
 	readingInts := false
-	intsRead := false 
+	intsRead := false
 	var instruccionRune []rune
 	var instruccionString string
 	var itemRune []rune
@@ -85,13 +86,13 @@ func lecturaByteCode(text string) {
 	for index, chr := range text {
 		if chr != '\t' && !readingInts && intsRead {
 			itemRune = append(itemRune, chr)
-			if index+1 == len(text){
-				item = any(itemRune)
+			if index+1 == len(text) {
+				item = convertTextToVariable(itemRune)
 				whichExecute(instruccionString, item)
 				return
-			} 
+			}
 			if text[index+1] == '\r' {
-				item = any(itemRune)
+				item = convertTextToVariable(itemRune)
 				whichExecute(instruccionString, item)
 				instruccionString = ""
 				instruccionRune = []rune{}
@@ -115,6 +116,67 @@ func lecturaByteCode(text string) {
 	}
 }
 
+func convertTextToVariable(text []rune) any {
+	numers := []rune{48, 49, 50, 51, 52, 53, 54, 55, 56, 57}
+	whatVariable := 1 // 1=int, 2=float, 3=rune/character, 4=string
+	noMoreFloat := false
+	negative := true
+	for _, val := range text {
+		if negative && val == '-' {
+			continue
+		} else {
+			negative = false
+		}
+		if contains(numers, val) {
+			continue
+		} else if val == '.' && (text[0] != val || text[len(text)-1] != val) && !noMoreFloat {
+			whatVariable = 2
+			noMoreFloat = true
+		} else if len(text) == 1 {
+			whatVariable = 3
+			break
+		} else {
+			whatVariable = 4
+			break
+		}
+	}
+	var n any
+	switch whatVariable {
+	case 1:
+		{
+			n, _ := strconv.Atoi((string(text)))
+			fmt.Println(n)
+			return n
+		}
+	case 2:
+		{
+			n, _ := strconv.ParseFloat(string(text), 32)
+			fmt.Println(n)
+			return n
+		}
+	case 3:
+		{
+			n = text
+			return n
+		}
+	case 4:
+		{
+			n = string(text)
+			return n
+		}
+	}
+	return n
+}
+
+func contains(slice []rune, val rune) bool {
+	for _, v := range slice {
+		if v == val {
+			return true
+		}
+	}
+	return false
+}
+
 func whichExecute(instruccion string, item any) {
 	switch instruccion {
 	case "LOAD_CONST":
@@ -130,7 +192,7 @@ func EXECUTE_LOAD_CONST(item any) {
 }
 
 func main() {
-	/*var txt string = "Pruebas_de_interprete\\example1.txt"
+	var txt string = "Pruebas_de_interprete\\example1.txt"
 	fileError, errorName := fileExist(txt)
 	if fileError {
 		fmt.Println("Si va")
@@ -140,13 +202,13 @@ func main() {
 	dataTemp, _ := readFile(txt)
 	data := string(dataTemp)
 	fmt.Println(data)
-	lecturaByteCode(data)*/
-	tal:= 'a'
-	e := int(tal)
-	fmt.Println(e)
+	lecturaByteCode(data)
+
 	//
 	/*var tal string = "dsds"
-	fmt.Println(any(tal))*/
+	fmt.Println(any(tal))
+	/*tal := '0'
+	fmt.Println(tal)*/
 }
 
 /*Prueba
