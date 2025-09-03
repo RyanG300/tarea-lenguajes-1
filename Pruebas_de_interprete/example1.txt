@@ -1,2 +1,2 @@
-0	LOAD_CONST		presto
+0	LOAD_CONST		0
 1	STORE_FAST		x
