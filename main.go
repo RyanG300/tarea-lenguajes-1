@@ -12,6 +12,8 @@ import (
 ------------------Pila y memoria de las variables (struct)----------------
 ------------------------------------------------------------------------
 */
+
+// La pila, tiene los metodos push, pop, top, isEmpty
 type Stack struct {
 	items []any
 }
@@ -76,6 +78,7 @@ func readFile(path string) ([]byte, error) {
 ----------------------- Instrucciones de bytecode ------------------------
 ------------------------------------------------------------------------*/
 
+// Lee cada una de las instrucciones del archivo txt
 func lecturaByteCode(text string) {
 	readingInts := false
 	intsRead := false
@@ -116,6 +119,7 @@ func lecturaByteCode(text string) {
 	}
 }
 
+// Convierte la variable del archivo txt en string, rune, int, float32 (La lista es de otra forma)
 func convertTextToVariable(text []rune) any {
 	numers := []rune{48, 49, 50, 51, 52, 53, 54, 55, 56, 57}
 	whatVariable := 1 // 1=int, 2=float, 3=rune/character, 4=string
@@ -168,7 +172,8 @@ func convertTextToVariable(text []rune) any {
 	return n
 }
 
-func contains(slice []rune, val rune) bool {
+// Comprueba si existe val en un slice cualquiera
+func contains[T comparable](slice []T, val T) bool {
 	for _, v := range slice {
 		if v == val {
 			return true
@@ -177,6 +182,7 @@ func contains(slice []rune, val rune) bool {
 	return false
 }
 
+// Que instrucción ejecuta
 func whichExecute(instruccion string, item any) {
 	switch instruccion {
 	case "LOAD_CONST":
@@ -190,6 +196,10 @@ func EXECUTE_LOAD_CONST(item any) {
 	stack.push(item)
 	fmt.Println(stack.items[0])
 }
+
+/*------------------------------------------------------------------------
+------------------------ Main Main Main Main Main ------------------------
+------------------------------------------------------------------------*/
 
 func main() {
 	var txt string = "Pruebas_de_interprete\\example1.txt"
