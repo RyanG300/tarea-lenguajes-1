@@ -19,12 +19,14 @@ type Stack struct {
 }
 
 type variablesMemory struct { //Es lo mismo al anterior struct, estas separadas solo para evitar utilizar los atributos de la pila en la memoria de variables
-	variables []any
+	nombre any
+	variable any
 }
 
 var stack Stack
-var varMemory variablesMemory
-var varIndex map[any]int
+type varMemory []variablesMemory
+var varMem varMemory 
+//var varIndex map[any]int
 
 
 /*------------------------------------------------------------------------
@@ -103,6 +105,7 @@ func lecturaByteCode(text string) {
 				instruccionString = ""
 				instruccionRune = []rune{}
 				intsRead = false
+				itemRune = []rune{}
 			}
 		} else if chr == '\t' && !readingInts && !intsRead {
 			readingInts = true
@@ -112,6 +115,7 @@ func lecturaByteCode(text string) {
 			instruccionString = ""
 			instruccionRune = []rune{}
 			readingInts = false
+			
 		} else if chr == '\t' && readingInts {
 			instruccionString = string(instruccionRune)
 			readingInts = false
@@ -152,13 +156,13 @@ func convertTextToVariable(text []rune) any {
 	case 1:
 		{
 			n, _ := strconv.Atoi((string(text)))
-			fmt.Println(n)
+			//fmt.Println(n)
 			return n
 		}
 	case 2:
 		{
 			n, _ := strconv.ParseFloat(string(text), 32)
-			fmt.Println(n)
+			//fmt.Println(n)
 			return n
 		}
 	case 3:
@@ -191,7 +195,7 @@ func whichExecute(instruccion string, item any) {
 	case "LOAD_CONST":
 		EXECUTE_LOAD_CONST(item)
 	case "STORE_FAST":
-		varMemory.EXECUTE_STORE_FAST(item)
+		varMem.EXECUTE_STORE_FAST(item)
 	}
 }
 
@@ -202,14 +206,14 @@ func EXECUTE_LOAD_CONST(item any) {
 }
 
 //Escribe el contenido del tope de la pila en la variable
-func (varMe *variablesMemory) EXECUTE_STORE_FAST(varname any) {
-	var index = len(varMe.variables)-1
-	varIndex[varname] = index
+func (varMe *varMemory) EXECUTE_STORE_FAST(varname any) {
+	//var index = len(*varMe)-1
+	//varIndex[varname] = index
 	variableItem,top := stack.top()
 	if(!top){
 		panic("(Error) No se puede almacenar variables sin un tope en la pila")
 	}
-	varMe.variables = append(varMe.variables, variableItem)
+	*varMe = append(*varMe, variablesMemory{nombre: varname, variable: variableItem})
 	stack.pop()
 }
 
@@ -225,12 +229,11 @@ func main() {
 	} else {
 		fmt.Println("no va xdxdxd: ", errorName)
 	}
-	varIndex = make(map[any]int)
+	//varIndex = make(map[any]int)
 	dataTemp, _ := readFile(txt)
 	data := string(dataTemp)
 	fmt.Println(data)
 	lecturaByteCode(data)
-	fmt.Println(varMemory.variables[varIndex["x"]])
 	//
 	/*var tal string = "dsds"
 	fmt.Println(any(tal))
