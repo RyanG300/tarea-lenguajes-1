@@ -10,9 +10,6 @@ def prueba():
 
 dis.dis(prueba)
 
-hola = [0,1,2,3]
 
-if (1 in hola):
-    print("si")
 
 

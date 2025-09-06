@@ -23,6 +23,9 @@ type variablesMemory struct { //Es lo mismo al anterior struct, estas separadas 
 }
 
 var stack Stack
+var varMemory variablesMemory
+var varIndex map[any]int
+
 
 /*------------------------------------------------------------------------
 ---------------------------Atributos de la pila---------------------------
@@ -32,14 +35,14 @@ func (s *Stack) push(v any) {
 	s.items = append(s.items, v)
 }
 
-func (s *Stack) pop() (any, bool) {
+func (s *Stack) pop() (bool) {
 	if len(s.items) == 0 {
-		return nil, false
+		return false
 	}
 	i := len(s.items) - 1
-	v := s.items[i]
+	//v := s.items[i]
 	s.items = s.items[:i]
-	return v, true
+	return  true
 }
 
 func (s *Stack) top() (any, bool) {
@@ -188,13 +191,26 @@ func whichExecute(instruccion string, item any) {
 	case "LOAD_CONST":
 		EXECUTE_LOAD_CONST(item)
 	case "STORE_FAST":
-		fmt.Println("Something happened 2...")
+		varMemory.EXECUTE_STORE_FAST(item)
 	}
 }
 
+//Coloca el valor de la constante en el tope de la pila 
 func EXECUTE_LOAD_CONST(item any) {
 	stack.push(item)
-	fmt.Println(stack.items[0])
+	//fmt.Println(stack.items[0])
+}
+
+//Escribe el contenido del tope de la pila en la variable
+func (varMe *variablesMemory) EXECUTE_STORE_FAST(varname any) {
+	var index = len(varMe.variables)-1
+	varIndex[varname] = index
+	variableItem,top := stack.top()
+	if(!top){
+		panic("(Error) No se puede almacenar variables sin un tope en la pila")
+	}
+	varMe.variables = append(varMe.variables, variableItem)
+	stack.pop()
 }
 
 /*------------------------------------------------------------------------
@@ -209,11 +225,12 @@ func main() {
 	} else {
 		fmt.Println("no va xdxdxd: ", errorName)
 	}
+	varIndex = make(map[any]int)
 	dataTemp, _ := readFile(txt)
 	data := string(dataTemp)
 	fmt.Println(data)
 	lecturaByteCode(data)
-
+	fmt.Println(varMemory.variables[varIndex["x"]])
 	//
 	/*var tal string = "dsds"
 	fmt.Println(any(tal))
