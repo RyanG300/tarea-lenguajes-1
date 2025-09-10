@@ -19,17 +19,30 @@ type Stack struct {
 	items []any
 }
 
+var stack Stack
+
 type variablesMemory struct { //Es lo mismo al anterior struct, estas separadas
 	// solo para evitar utilizar los atributos de la pila en la memoria de variables
 	nombre   any
 	variable any
 }
 
-var stack Stack
-
 type varMemory []variablesMemory
-
 var varMem varMemory
+
+/*
+------------------------------------------------------------------------
+-----------------------------instruction list---------------------------
+------------------------------------------------------------------------
+*/
+
+type instruction struct {
+	name string
+	item any
+}
+
+type instructionList []instruction
+var instructions instructionList
 
 //var varIndex map[any]int
 
@@ -84,11 +97,11 @@ func readFile(path string) ([]byte, error) {
 }
 
 /*------------------------------------------------------------------------
------------------------ Instrucciones de bytecode ------------------------
+------------------------- Lector ByteCode y más --------------------------
 ------------------------------------------------------------------------*/
 
 // Lee cada una de las instrucciones del archivo txt
-func lecturaByteCode(text string) {
+func (inst *instructionList)lecturaByteCode(text string) {
 	readingInts := false
 	intsRead := false
 	var instruccionRune []rune
@@ -100,12 +113,14 @@ func lecturaByteCode(text string) {
 			itemRune = append(itemRune, chr)
 			if index+1 == len(text) {
 				item = convertTextToVariable(itemRune)
-				whichExecute(instruccionString, item)
+				//whichExecute(instruccionString, item)
+				*inst = append(*inst, instruction{name: instruccionString, item: item})
 				return
 			}
 			if text[index+1] == '\r' {
 				item = convertTextToVariable(itemRune)
-				whichExecute(instruccionString, item)
+				//whichExecute(instruccionString, item)
+				*inst = append(*inst, instruction{name: instruccionString, item: item})
 				instruccionString = ""
 				instruccionRune = []rune{}
 				intsRead = false
@@ -115,7 +130,8 @@ func lecturaByteCode(text string) {
 			readingInts = true
 		} else if chr == '\r' && readingInts {
 			instruccionString = string(instruccionRune)
-			whichExecute(instruccionString, item)
+			//whichExecute(instruccionString, item)
+			*inst = append(*inst, instruction{name: instruccionString, item: item})
 			instruccionString = ""
 			instruccionRune = []rune{}
 			readingInts = false
@@ -126,6 +142,12 @@ func lecturaByteCode(text string) {
 			intsRead = true
 		} else if readingInts {
 			instruccionRune = append(instruccionRune, chr)
+			if index+1 == len(text) {
+				instruccionString = string(instruccionRune)
+				//whichExecute(instruccionString, item)
+				*inst = append(*inst, instruction{name: instruccionString, item: item})
+				return
+			}
 		}
 	}
 }
@@ -171,7 +193,7 @@ func convertTextToVariable(text []rune) any {
 		}
 	case 3:
 		{
-			n = text
+			n = string(text)
 			return n
 		}
 	case 4:
@@ -182,6 +204,87 @@ func convertTextToVariable(text []rune) any {
 	}
 	return n
 }
+
+// Compara dos variables de cualquier tipo (Solo string, []int32,float32 e int)
+func EqualAny(a, b any) bool {
+	// nil handling
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+
+	switch va := a.(type) {
+	case string:
+		vb, ok := b.(string)
+		if !ok {
+			return false
+		}
+		return va == vb
+
+	case []int32:
+		vb, ok := b.([]int32)
+		if !ok {
+			return false
+		}
+		// tratar nil y slice vacío como iguales
+		if len(va) == 0 && len(vb) == 0 {
+			return true
+		}
+		if len(va) != len(vb) {
+			return false
+		}
+		for i := range va {
+			if va[i] != vb[i] {
+				return false
+			}
+		}
+		return true
+
+	case float32:
+		// b puede ser float32 o int
+		switch vb := b.(type) {
+		case float32:
+			af := float64(va)
+			bf := float64(vb)
+			if math.IsNaN(af) || math.IsNaN(bf) {
+				return false
+			}
+			return af == bf
+		case int:
+			af := float64(va)
+			bf := float64(vb)
+			if math.IsNaN(af) || math.IsNaN(bf) {
+				return false
+			}
+			return af == bf
+		default:
+			return false
+		}
+
+	case int:
+		// b puede ser int o float32
+		switch vb := b.(type) {
+		case int:
+			return va == vb
+		case float32:
+			af := float64(va)
+			bf := float64(vb)
+			if math.IsNaN(af) || math.IsNaN(bf) {
+				return false
+			}
+			return af == bf
+		default:
+			return false
+		}
+
+	default:
+		// no deberían llegar otros tipos
+		return false
+	}
+}
+
 
 // Comprueba si existe val en un slice cualquiera
 func contains[T comparable](slice []T, val T) bool {
@@ -194,22 +297,195 @@ func contains[T comparable](slice []T, val T) bool {
 }
 
 // Que instrucción ejecuta
-func whichExecute(instruccion string, item any) {
-	switch instruccion {
-	case "LOAD_CONST":
-		EXECUTE_LOAD_CONST(item)
-	case "STORE_FAST":
-		varMem.EXECUTE_STORE_FAST(item)
-	case "BINARY_MULTIPLY":
-		EXECUTE_BINARY_MULTIPLY()
-
+func whichExecute( inst *instructionList) {
+	for _, ins := range *inst {
+		switch ins.name {
+		case "LOAD_CONST":
+			EXECUTE_LOAD_CONST(ins.item)
+		case "STORE_FAST":
+			varMem.EXECUTE_STORE_FAST(ins.item)
+		case "BINARY_MULTIPLY":
+			EXECUTE_BINARY_MULTIPLY()
+		case "LOAD_FAST":
+			EXECUTE_LOAD_FAST(ins.item)
+		case "BINARY_DIVIDE":
+			EXECUTE_BINARY_DIVIDE()
+		case "BINARY_AND":
+			EXECUTE_BINARY_AND()
+		case "BINARY_OR":
+			EXECUTE_BINARY_OR()
+		case "BINARY_MODULO":
+			EXECUTE_BINARY_MODULO()
+		case "BUILD_LIST":
+			EXECUTE_BUILD_LIST(ins.item.(int))
+		case "BINARY_SUBSCR":
+			EXECUTE_BINARY_SUBSCR()
+		case "STORE_SUBSCR":
+			EXECUTE_STORE_SUBSCR()
+		case "LOAD_GLOBAL":
+			EXECUTE_LOAD_GLOBAL(ins.item)
+		case "CALL_FUNCTION":
+			EXECUTE_CALL_FUNCTION(ins.item.(int))
+		case "COMPARE_OP":{
+			EXECUTE_COMPARE_OP(ins.item.(string))
+			/*switch ins.item.(type) {
+				
+				case []int32:
+					var itemStr string
+					for _, val := range ins.item.([]int32) {
+						itemStr += strconv.Itoa(int(val))
+					}
+					EXECUTE_COMPARE_OP(itemStr)
+				case string:
+					EXECUTE_COMPARE_OP(ins.item.(string))	
+				default:
+					panic("(Error) Operador de comparación no reconocido")
+				}*/
+		}
+		case "BINARY_SUBSTRACT":
+			EXECUTE_BINARY_SUBSTRACT()
+		case "BINARY_ADD":
+			EXECUTE_BINARY_ADD()
+		default:
+			panic("(Error) Instrucción " + ins.name + " no reconocida")
+		}
 	}
 }
+
+/*------------------------------------------------------------------------
+----------------------- Instrucciones de bytecode ------------------------
+------------------------------------------------------------------------*/
 
 // Coloca el valor de la constante en el tope de la pila
 func EXECUTE_LOAD_CONST(item any) {
 	stack.push(item)
-	//fmt.Println(stack.items[0])
+	fmt.Println(stack.items[len(stack.items)-1])
+}
+
+//Coloca el valor del contenido de la variable en la pila
+func EXECUTE_LOAD_FAST(varname any) {
+	for i := len(varMem) - 1; i >= 0; i-- {
+		if EqualAny(varMem[i].nombre, varname) {
+			stack.push(varMem[i].variable)
+			fmt.Println("Variable ", varMem[i].nombre, " cargada con el valor de: ", varMem[i].variable, " en el tope de la pila")
+			return
+		}
+	}
+	panic("(Error) La variable " + fmt.Sprint(varname) + " no está definida")
+}
+
+//Carga en el tope de la pila o el valor de la referencia a la función
+func EXECUTE_LOAD_GLOBAL(varname any) {
+	if(EqualAny(varname, "print")){
+		stack.push("print")
+		fmt.Println("Función print cargada en el tope de la pila")
+		return
+	}
+	panic("(Error) La función " + fmt.Sprint(varname) + " no está definida")
+}
+
+//Realiza un salto a la dirección de código de la función (Solo print jaja)
+func EXECUTE_CALL_FUNCTION(numArgs int) {
+	if len(stack.items) < numArgs+1 {
+		panic("(Error) No hay suficientes elementos en la pila para realizar la llamada a función")
+	}
+	args := make([]any, numArgs)
+	for i := numArgs - 1; i >= 0; i-- {
+		arg, _ := stack.top()
+		stack.pop()
+		args[i] = arg
+	}
+	fmt.Print("Output de print: ")
+	for _, arg := range args {
+		fmt.Print(arg, " ")
+	}
+	
+}
+
+//Realiza una comparación booleana según el op que reciba
+func EXECUTE_COMPARE_OP(op string) {
+	if len(stack.items) < 2 {
+		panic("(Error) No hay suficientes elementos en la pila para realizar la comparación")
+	}
+	val2, _ := stack.top()
+	stack.pop()
+	val1, _ := stack.top()
+	stack.pop()
+	var result bool
+	switch op {
+	case "==":
+		result = EqualAny(val1, val2)
+	case "!=":
+		result = !EqualAny(val1, val2)
+	case "<":
+		result = fmt.Sprint(val1) < fmt.Sprint(val2)
+	case "<=":
+		result = fmt.Sprint(val1) <= fmt.Sprint(val2)
+	case ">":
+		result = fmt.Sprint(val1) > fmt.Sprint(val2)
+	case ">=":
+		result = fmt.Sprint(val1) >= fmt.Sprint(val2)
+	default:
+		panic("(Error) Operador de comparación no soportado")
+	}
+	stack.push(result)
+	fmt.Println("Resultado de la comparación ", op, ": ", result)
+}
+
+//Realiza una suma de operandos
+func EXECUTE_BINARY_SUBSTRACT() {
+	if len(stack.items) < 2 {
+		panic("(Error) No hay suficientes elementos en la pila para realizar resta")
+	}
+	toFloat := func(val any) float64 {
+		switch v := val.(type) {
+		case int:
+			return float64(v)
+		case float32:
+			return float64(v)
+		case float64:
+			return v
+		default:
+			panic("(Error) Tipo no soportado en resta")
+		}
+	}
+	val2, _ := stack.top()
+	stack.pop()
+	val1, _ := stack.top()
+	stack.pop()
+	n1 := toFloat(val1)
+	n2 := toFloat(val2)
+	stack.push(n1 - n2)
+	a,_ := stack.top()
+	fmt.Println("Resultado de la resta: ", a)
+}
+
+//ealiza una suma de operandos
+func EXECUTE_BINARY_ADD() {
+	if len(stack.items) < 2 {
+		panic("(Error) No hay suficientes elementos en la pila para realizar suma")
+	}
+	toFloat := func(val any) float64 {
+		switch v := val.(type) {
+		case int:
+			return float64(v)
+		case float32:
+			return float64(v)
+		case float64:
+			return v
+		default:
+			panic("(Error) Tipo no soportado en suma")
+		}
+	}
+	val2, _ := stack.top()
+	stack.pop()
+	val1, _ := stack.top()
+	stack.pop()
+	n1 := toFloat(val1)
+	n2 := toFloat(val2)
+	stack.push(n1 + n2)
+	a,_ := stack.top()
+	fmt.Println("Resultado de la suma: ", a)
 }
 
 // Escribe el contenido del tope de la pila en la variable
@@ -220,8 +496,18 @@ func (varMe *varMemory) EXECUTE_STORE_FAST(varname any) {
 	if !top {
 		panic("(Error) No se puede almacenar variables sin un tope en la pila")
 	}
+	for i := len(*varMe) - 1; i >= 0; i-- {
+		if EqualAny((*varMe)[i].nombre, varname) {
+			(*varMe)[i].variable = variableItem
+			stack.pop()
+			fmt.Println("Variable ", (*varMe)[i].nombre, " actualizada con el valor de: ", (*varMe)[i].variable)
+			return
+		}
+	}
+	//Si no existe la variable, se crea
 	*varMe = append(*varMe, variablesMemory{nombre: varname, variable: variableItem})
 	stack.pop()
+	fmt.Println("Variable ", (*varMe)[len(*varMe)-1].nombre, " guardada con el valor de: ", (*varMe)[len(*varMe)-1].variable)
 }
 
 // Realiza la multiplicación de los dos valores en el tope de la pila
@@ -448,7 +734,8 @@ func main() {
 	dataTemp, _ := readFile(txt)
 	data := string(dataTemp)
 	fmt.Println(data)
-	lecturaByteCode(data)
+	instructions.lecturaByteCode(data)
+	whichExecute(&instructions)
 	//
 	/*var tal string = "dsds"
 	fmt.Println(any(tal))
