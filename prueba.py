@@ -10,6 +10,8 @@ def prueba():
 
 dis.dis(prueba)
 
+if (10 == "10"):
+    print("10 es igual a 10")
 
 
 

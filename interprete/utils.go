@@ -2,9 +2,13 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"math"
+	"math/big"
 	"os"
+	"reflect"
 	"strconv"
+	"strings"
 )
 
 /*------------------------------------------------------------------------
@@ -167,4 +171,90 @@ func contains[T comparable](slice []T, val T) bool {
 		}
 	}
 	return false
+}
+
+// toRat intenta convertir v a *big.Rat. Devuelve (rat, true) si pudo.
+func toRat(v interface{}) (*big.Rat, bool) {
+	if v == nil {
+		return nil, false
+	}
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return new(big.Rat).SetInt64(rv.Int()), true
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		u := rv.Uint()
+		bi := new(big.Int).SetUint64(u)
+		return new(big.Rat).SetInt(bi), true
+	case reflect.Float32, reflect.Float64:
+		f := rv.Float()
+		r := new(big.Rat)
+		r.SetFloat64(f) // convierte el float a rational (puede perder exactitud para floats)
+		return r, true
+	case reflect.String:
+		s := rv.String()
+		r := new(big.Rat)
+		if _, ok := r.SetString(s); ok { // acepta "10", "3.14", "-5/2"...
+			return r, true
+		}
+		return nil, false
+	default:
+		// Intenta parsear la representación textual como número (por ejemplo si es tipo personalizado)
+		s := fmt.Sprint(v)
+		r := new(big.Rat)
+		if _, ok := r.SetString(s); ok {
+			return r, true
+		}
+		return nil, false
+	}
+}
+
+// CompareAny compara a y b y devuelve:
+//
+//	-1 si a < b
+//	 0 si a == b
+//	+1 si a > b
+//
+// y error si no se pueden comparar (a menos que allowDeterministicFallback=true).
+func CompareAny(a, b interface{}, allowDeterministicFallback bool) (int, error) {
+	// igualdad rápida
+	if reflect.DeepEqual(a, b) {
+		return 0, nil
+	}
+
+	// intento numérico: si ambos son convertibles a big.Rat, comparar numéricamente
+	if ra, oka := toRat(a); oka {
+		if rb, okb := toRat(b); okb {
+			return ra.Cmp(rb), nil // -1,0,1
+		}
+	}
+
+	// bool
+	if ab, oka := a.(bool); oka {
+		if bb, okb := b.(bool); okb {
+			if ab == bb {
+				return 0, nil
+			}
+			if !ab && bb {
+				return -1, nil // false < true
+			}
+			return 1, nil
+		}
+	}
+
+	// string
+	if as, oka := a.(string); oka {
+		if bs, okb := b.(string); okb {
+			return strings.Compare(as, bs), nil // -1,0,1
+		}
+	}
+
+	// no comparable semántico: fallback determinístico o error
+	if allowDeterministicFallback {
+		sa := fmt.Sprintf("%T|%v", a, a)
+		sb := fmt.Sprintf("%T|%v", b, b)
+		return strings.Compare(sa, sb), nil
+	}
+
+	return 0, fmt.Errorf("no se pueden comparar los tipos %T y %T", a, b)
 }

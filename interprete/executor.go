@@ -132,10 +132,12 @@ func EXECUTE_CALL_FUNCTION(numArgs int) {
 		stack.pop()
 		args[i] = arg
 	}
+	stack.pop()
 	fmt.Print("Output de print: ")
 	for _, arg := range args {
 		fmt.Print(arg, " ")
 	}
+	fmt.Println("")
 
 }
 
@@ -148,22 +150,27 @@ func EXECUTE_COMPARE_OP(op string) {
 	stack.pop()
 	val1, _ := stack.top()
 	stack.pop()
+	cmp, err := CompareAny(val1, val2, false) // false -> no fallback arbitrario
+	if err != nil {
+		panic(err) // o manejar error
+	}
+
 	var result bool
 	switch op {
-	case "==":
-		result = EqualAny(val1, val2)
-	case "!=":
-		result = !EqualAny(val1, val2)
 	case "<":
-		result = fmt.Sprint(val1) < fmt.Sprint(val2)
+		result = cmp < 0
 	case "<=":
-		result = fmt.Sprint(val1) <= fmt.Sprint(val2)
+		result = cmp <= 0
 	case ">":
-		result = fmt.Sprint(val1) > fmt.Sprint(val2)
+		result = cmp > 0
 	case ">=":
-		result = fmt.Sprint(val1) >= fmt.Sprint(val2)
+		result = cmp >= 0
+	case "==":
+		result = cmp == 0
+	case "!=":
+		result = cmp != 0
 	default:
-		panic("(Error) Operador de comparación no soportado")
+		panic("operador no soportado")
 	}
 	stack.push(result)
 	fmt.Println("Resultado de la comparación ", op, ": ", result)
@@ -218,6 +225,16 @@ func EXECUTE_BINARY_ADD() {
 	stack.pop()
 	val1, _ := stack.top()
 	stack.pop()
+
+	if a, ok := val1.(int); ok {
+		if b, ok2 := val2.(int); ok2 {
+			stack.push(a + b)
+			top, _ := stack.top()
+			fmt.Println("Resultado de la suma (int):", top)
+			return
+		}
+	}
+	
 	n1 := toFloat(val1)
 	n2 := toFloat(val2)
 	stack.push(n1 + n2)

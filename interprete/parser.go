@@ -35,7 +35,7 @@ func (inst *instructionList) lecturaByteCode(text string) {
 		} else if chr == '\r' && readingInts {
 			instruccionString = string(instruccionRune)
 			//whichExecute(instruccionString, item)
-			*inst = append(*inst, instruction{name: instruccionString, item: item})
+			*inst = append(*inst, instruction{name: instruccionString, item: nil})
 			instruccionString = ""
 			instruccionRune = []rune{}
 			readingInts = false
